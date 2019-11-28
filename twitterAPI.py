@@ -23,12 +23,12 @@ tweets_per_call = 200
 
 if tweets_max > tweets_per_call:
     new_tweets = api.user_timeline(
-        screen_name=screen_name, count=tweets_per_call)
+        screen_name=screen_name, count=tweets_per_call, tweet_mode="extended")
 
 elif tweets_max < tweets_per_call:
     tweets_per_call = tweets_max
     new_tweets = api.user_timeline(
-        screen_name=screen_name, count=tweets_per_call)
+        screen_name=screen_name, count=tweets_per_call, tweet_mode="extended")
 
 Collected_data.extend(new_tweets)
 
@@ -43,7 +43,7 @@ while tweets_needed != 0:
         tweets_needed = tweets_per_call
 
     new_tweets = api.user_timeline(
-        screen_name=screen_name, count=tweets_needed, max_id=oldest)
+        screen_name=screen_name, count=tweets_needed, max_id=oldest, tweet_mode="extended")
 
     tweets_needed = tweets_needed - tweets_per_call
 
@@ -61,8 +61,8 @@ outtweets = [[tweet.id,
               tweet.retweeted,
               tweet.source,
               tweet.text,
-              tweet.truncated,
-              hash(tweet.in_reply_to_screen_name) % (10 ** 8),] for tweet in Collected_data]
+              hash(tweet.in_reply_to_screen_name) % (10 ** 8)
+             ] for tweet in Collected_data]
 
 i = 0
 
@@ -88,7 +88,6 @@ with open(file_name, "w",) as f:
                      "retweeted",
                      "source",
                      "text",
-                     "truncated",
                      "in_reply_to_screen_name",
                      "media_type"])
     writer.writerows(outtweets)
