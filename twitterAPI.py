@@ -61,7 +61,7 @@ outtweets = [[tweet.id,
               tweet.retweeted,
               tweet.source,
               tweet.text,
-              hash(tweet.in_reply_to_screen_name) % (10 ** 8)
+              tweet.in_reply_to_user_id
              ] for tweet in Collected_data]
 
 i = 0
