@@ -1,5 +1,6 @@
 import tweepy
 import csv
+from datetime import datetime
 
 # Twitter API credentials
 consumer_key = ""
@@ -72,8 +73,12 @@ for tweet in Collected_data:
 
     i += 1
 
+now = datetime.now()
+dt_string = now.strftime("%d-%m-%Y-%H-%M-%S")
 
-with open('tweets.csv', "w",) as f:
+file_name = "tweets_%s_%s.csv" % (screen_name, dt_string)
+
+with open(file_name, "w",) as f:
     writer = csv.writer(f)
     writer.writerow(["tweet_id",
                      "username",
