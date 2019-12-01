@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 import pandas as pd
 
 import csv
@@ -170,5 +171,10 @@ for item in post_elems:
     pd_list.append(item_pd)
 
 
+now = datetime.now()
+dt_string = now.strftime("%d-%m-%Y-%H-%M-%S")
+
+file_name = "tweets_scraped_%s_%s.csv" % (ID_text, dt_string)
+
 data = pd.concat(pd_list)
-data.to_csv('twitter_test.csv')
+data.to_csv(file_name)
