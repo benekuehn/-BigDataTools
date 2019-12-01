@@ -6,6 +6,32 @@ import csv
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
+import re
+from nltk.tokenize import WordPunctTokenizer
+
+
+def clean_text(text):
+    user_removed = re.sub(r'@[A-Za-z0-9]+', '', text)
+    link_removed = re.sub('https?://[A-Za-z0-9./]+', '', user_removed)
+    number_removed = re.sub('[^a-zA-Z]', ' ', link_removed)
+    lower_case_tweet = number_removed.lower()
+    tok = WordPunctTokenizer()
+    words = tok.tokenize(lower_case_tweet)
+    cleaned_text = (' '.join(words)).strip()
+    return cleaned_text
+
+
+def get_text_sentiment(clean_text):
+
+    # create TextBlob object of passed tweet text
+    analysis = TextBlob(clean_text)
+    # set sentiment
+    print(analysis.sentiment)
+    polarity = analysis.sentiment.polarity
+    subjectivity = analysis.sentiment.subjectivity
+    return polarity, subjectivity
+
+
 # Put in location of chrome driver https://chromedriver.chromium.org
 browser = webdriver.Chrome("")
 
@@ -57,6 +83,12 @@ for item in post_elems:
     if len(text_) > 0:
         text_text = text_[0].text
     item_dict['content'] = text_text
+
+    # Sentiment of Text
+    clean_text = clean_text(text_text)
+    polarity, subjectivity = get_text_sentiment(clean_text)
+    item_dict['polarity'] = polarity
+    item_dict['subjectivity'] = subjectivity
 
     # NO of replies
     replies = item.find_elements_by_class_name("js-actionReply")
