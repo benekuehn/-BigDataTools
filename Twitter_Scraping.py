@@ -80,7 +80,6 @@ for item in post_elems:
         # create TextBlob object of passed tweet text
         analysis = TextBlob(clean_text)
         # set sentiment
-        print(analysis.sentiment)
         polarity = analysis.sentiment.polarity
         subjectivity = analysis.sentiment.subjectivity
         return polarity, subjectivity
