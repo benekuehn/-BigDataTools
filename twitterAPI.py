@@ -2,6 +2,11 @@ import tweepy
 import csv
 from datetime import datetime
 
+import re
+import nltk
+from nltk.tokenize import WordPunctTokenizer
+from textblob import TextBlob
+
 # Twitter API credentials
 consumer_key = ""
 consumer_secret = ""
@@ -12,13 +17,13 @@ api = tweepy.API(auth)
 
 Collected_data = []
 
-#name of twitter account
+# name of twitter account
 screen_name = ""
 
-#number of tweets
+# number of tweets
 tweets_max = 3000
 
-#how many tweets per API request, default 200
+# how many tweets per API request, default 200
 tweets_per_call = 200
 
 if tweets_max > tweets_per_call:
@@ -62,25 +67,54 @@ while tweets_needed != 0:
 
 # print(Collected_data)
 
-    outtweets = [[tweet.id,
-                  tweet.user.screen_name,
-                  tweet.created_at,
-                  tweet.favorite_count,
-                  tweet.retweet_count,
-                  tweet.source,
-                  tweet.full_text,
-                  # tweet.entities["user_mentions"], // Just in case to memorize how it works
-                  tweet.in_reply_to_user_id,
-                  # tweet.author.screen_name, // Just in case to memorize how it works
-                  ] for tweet in Collected_data if (datetime.now() - tweet.created_at).days > 1] # Only processing tweets which are older then 1 day
+outtweets = [[tweet.id,
+              tweet.user.screen_name,
+              tweet.created_at,
+              tweet.favorite_count,
+              tweet.retweet_count,
+              tweet.source,
+              tweet.full_text,
+              # tweet.entities["user_mentions"], // Just in case to memorize how it works
+              tweet.in_reply_to_user_id,
+              # tweet.author.screen_name, // Just in case to memorize how it works
+              ] for tweet in Collected_data if (datetime.now() - tweet.created_at).days > 1]  # Only processing tweets which are older then 1 day
 
 
 i = 0
 has_writer = False
 for tweet in Collected_data:
 
-    # Only processing tweets which are older then 1 day
-    if (datetime.now() - tweet.created_at).days > 1:
+    if (datetime.now() - tweet.created_at).days > 0:
+        """
+        # In order to use sentiment analysis, please uncomment this blog.
+        # Further uncomment the headerrows polarity and subjectivity further down,
+        # in the writer.writerow
+
+        def clean_text(text):
+            user_removed = re.sub(r'@[A-Za-z0-9]+', '', text)
+            link_removed = re.sub('https?://[A-Za-z0-9./]+', '', user_removed)
+            number_removed = re.sub('[^a-zA-Z]', ' ', link_removed)
+            lower_case_tweet = number_removed.lower()
+            tok = WordPunctTokenizer()
+            words = tok.tokenize(lower_case_tweet)
+            cleaned_text = (' '.join(words)).strip()
+            return cleaned_text
+
+        def get_text_sentiment(clean_text):
+            # create TextBlob object of passed tweet text
+            analysis = TextBlob(clean_text)
+            # set sentiment
+            polarity = analysis.sentiment.polarity
+            subjectivity = analysis.sentiment.subjectivity
+            return polarity, subjectivity
+
+        # sentiment analysis
+        cleaned_text = clean_text(tweet.full_text)
+        polarity, subjectivity = get_text_sentiment(cleaned_text)
+        outtweets[i].append(polarity)
+        outtweets[i].append(subjectivity)
+
+        """
 
         if hasattr(tweet, "retweeted_status"):
             outtweets[i].append(1)
@@ -133,6 +167,8 @@ if has_writer == True:
                          "source",
                          "full_text",
                          "in_reply_to_user_id",
+                         # "polarity",
+                         # "subjectivity",
                          "is_retweeted",
                          "is_quote_status",
                          "has_url",
@@ -153,6 +189,8 @@ else:
                          "source",
                          "text",
                          "in_reply_to_user_id",
+                         # "polarity",
+                         # "subjectivity",
                          "is_retweeted",
                          "is_quote_status",
                          "has_url",
