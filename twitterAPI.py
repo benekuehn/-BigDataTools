@@ -73,7 +73,7 @@ outtweets = [[tweet.id,
               tweet.favorite_count,
               tweet.retweet_count,
               tweet.source,
-              tweet.full_text,
+              # tweet.full_text,
               # tweet.entities["user_mentions"], // Just in case to memorize how it works
               tweet.in_reply_to_user_id,
               # tweet.author.screen_name, // Just in case to memorize how it works
@@ -85,10 +85,6 @@ has_writer = False
 for tweet in Collected_data:
 
     if (datetime.now() - tweet.created_at).days > 0:
-        """
-        # In order to use sentiment analysis, please uncomment this blog.
-        # Further uncomment the headerrows polarity and subjectivity further down,
-        # in the writer.writerow
 
         def clean_text(text):
             user_removed = re.sub(r'@[A-Za-z0-9]+', '', text)
@@ -100,6 +96,11 @@ for tweet in Collected_data:
             cleaned_text = (' '.join(words)).strip()
             return cleaned_text
 
+        """
+        # In order to use sentiment analysis, please uncomment this blog.
+        # Further uncomment the headerrows polarity and subjectivity further down,
+        # in the writer.writerow
+
         def get_text_sentiment(clean_text):
             # create TextBlob object of passed tweet text
             analysis = TextBlob(clean_text)
@@ -108,13 +109,15 @@ for tweet in Collected_data:
             subjectivity = analysis.sentiment.subjectivity
             return polarity, subjectivity
 
+        """
         # sentiment analysis
         cleaned_text = clean_text(tweet.full_text)
-        polarity, subjectivity = get_text_sentiment(cleaned_text)
-        outtweets[i].append(polarity)
-        outtweets[i].append(subjectivity)
+        # polarity, subjectivity = get_text_sentiment(cleaned_text)
+        # outtweets[i].append(polarity)
+        # outtweets[i].append(subjectivity)
 
-        """
+        # appends cleaned text, so without numbers, # etc, no need to clean it manually or in SAS
+        outtweets[i].append(cleaned_text)
 
         if hasattr(tweet, "retweeted_status"):
             outtweets[i].append(1)
@@ -165,10 +168,10 @@ if has_writer == True:
                          "favorite_count",
                          "retweet_count",
                          "source",
-                         "full_text",
                          "in_reply_to_user_id",
                          # "polarity",
                          # "subjectivity",
+                         "full_text",
                          "is_retweeted",
                          "is_quote_status",
                          "has_url",
@@ -184,17 +187,17 @@ else:
         writer.writerow(["tweet_id",
                          "username",
                          "created_at",
-                         "favorites",
-                         "retweets",
+                         "favorite_count",
+                         "retweet_count",
                          "source",
-                         "text",
                          "in_reply_to_user_id",
                          # "polarity",
                          # "subjectivity",
+                         "full_text",
                          "is_retweeted",
                          "is_quote_status",
                          "has_url",
-                         "has_media", ]
+                         "has_media"]
                         )
         writer.writerows(outtweets)
     pass
