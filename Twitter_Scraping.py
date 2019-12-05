@@ -33,6 +33,27 @@ post_elems = browser.find_elements_by_class_name("has-cards")
 
 pd_list = []
 
+
+def clean_text(text):
+    user_removed = re.sub(r'@[A-Za-z0-9]+', '', text)
+    link_removed = re.sub('https?://[A-Za-z0-9./]+', '', user_removed)
+    number_removed = re.sub('[^a-zA-Z]', ' ', link_removed)
+    lower_case_tweet = number_removed.lower()
+    tok = WordPunctTokenizer()
+    words = tok.tokenize(lower_case_tweet)
+    cleaned_text = (' '.join(words)).strip()
+    return cleaned_text
+
+
+def get_text_sentiment(clean_text):
+    # create TextBlob object of passed tweet text
+    analysis = TextBlob(clean_text)
+    # set sentiment
+    polarity = analysis.sentiment.polarity
+    subjectivity = analysis.sentiment.subjectivity
+    return polarity, subjectivity
+
+
 for item in post_elems:
     item_dict = {}
 
@@ -42,14 +63,16 @@ for item in post_elems:
     # handle_text = ''
     if len(handle) > 0:
         handle_text = handle[0].text
-    item_dict['handle'] = handle_text
+        cleaned_handle_text = clean_text(handle_text[1:])
+    item_dict['handle'] = cleaned_handle_text  # delete at character
 
     # ID
     ID = item.find_elements_by_class_name("show-popup-with-id")
     ID_text = ''
     if len(ID) > 0:
         ID_text = ID[0].text
-    item_dict['screen_name'] = ID_text
+        cleaned_screen_name = clean_text(ID_text)
+    item_dict['screen_name'] = cleaned_screen_name
 
     # Time
     time_ = item.find_elements_by_class_name("js-short-timestamp")
@@ -63,32 +86,12 @@ for item in post_elems:
     text_text = ''
     if len(text_) > 0:
         text_text = text_[0].text
-    item_dict['content'] = text_text
-
-    def clean_text(text):
-        user_removed = re.sub(r'@[A-Za-z0-9]+', '', text)
-        link_removed = re.sub('https?://[A-Za-z0-9./]+', '', user_removed)
-        number_removed = re.sub('[^a-zA-Z]', ' ', link_removed)
-        lower_case_tweet = number_removed.lower()
-        tok = WordPunctTokenizer()
-        words = tok.tokenize(lower_case_tweet)
-        cleaned_text = (' '.join(words)).strip()
-        return cleaned_text
-
-    def get_text_sentiment(clean_text):
-
-        # create TextBlob object of passed tweet text
-        analysis = TextBlob(clean_text)
-        # set sentiment
-        polarity = analysis.sentiment.polarity
-        subjectivity = analysis.sentiment.subjectivity
-        return polarity, subjectivity
-
-    # Sentiment of Text
-    cleaned_text = clean_text(text_text)
-    polarity, subjectivity = get_text_sentiment(cleaned_text)
-    item_dict['polarity'] = polarity
-    item_dict['subjectivity'] = subjectivity
+        # Cleaning of text und sentiment of Text
+        cleaned_text = clean_text(text_text)
+        polarity, subjectivity = get_text_sentiment(cleaned_text)
+        item_dict['text'] = cleaned_text
+        item_dict['polarity'] = polarity
+        item_dict['subjectivity'] = subjectivity
 
     # NO of replies
     replies = item.find_elements_by_class_name("js-actionReply")
@@ -100,6 +103,9 @@ for item in post_elems:
             replies_text = temp[0].text
             if "K" in replies_text:
                 replies_text = replies_text[:-1]
+                replies_text = int(float(replies_text) * 1000)
+            elif "Tsd." in replies_text:
+                replies_text = replies_text[:-4]
                 replies_text = int(float(replies_text) * 1000)
     item_dict['replies'] = replies_text
 
@@ -114,6 +120,9 @@ for item in post_elems:
             if "K" in retweets_text:
                 retweets_text = retweets_text[:-1]
                 retweets_text = int(float(retweets_text) * 1000)
+            elif "Tsd." in replies_text:
+                replies_text = replies_text[:-4]
+                replies_text = int(float(replies_text) * 1000)
     item_dict['retweets'] = retweets_text
 
     # NO of favourites
@@ -127,6 +136,9 @@ for item in post_elems:
             if "K" in favourites_text:
                 favourites_text = favourites_text[:-1]
                 favourites_text = int(float(favourites_text) * 1000)
+            elif "Tsd." in replies_text:
+                replies_text = replies_text[:-4]
+                replies_text = int(float(replies_text) * 1000)
     item_dict['favourites'] = favourites_text
 
     # photo
