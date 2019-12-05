@@ -14,15 +14,15 @@ from textblob import TextBlob
 
 
 # Put in location of chrome driver https://chromedriver.chromium.org
-browser = webdriver.Chrome("")
+browser = webdriver.Chrome("/Users/luisanuhr/Desktop/chromedriver")
 
 # Put in URL of account you want to scrape
-browser.get("https://twitter.com/elonmusk")
+browser.get("https://twitter.com/AmericanAir")
 time.sleep(1)
 
 elem = browser.find_element_by_tag_name("body")
 
-no_of_pagedowns = 2
+no_of_pagedowns = 10
 
 while no_of_pagedowns:
     elem.send_keys(Keys.PAGE_DOWN)
@@ -33,6 +33,10 @@ post_elems = browser.find_elements_by_class_name("has-cards")
 
 pd_list = []
 
+def convert_comma(text):
+	maketrans = text.maketrans
+	final = text.translate(maketrans(', .', '., '))
+	return final
 
 def clean_text(text):
     user_removed = re.sub(r'@[A-Za-z0-9]+', '', text)
@@ -105,7 +109,8 @@ for item in post_elems:
                 replies_text = replies_text[:-1]
                 replies_text = int(float(replies_text) * 1000)
             elif "Tsd." in replies_text:
-                replies_text = replies_text[:-4]
+                replies_text = replies_text[:-5]
+                replies_text = convert_comma(replies_text)
                 replies_text = int(float(replies_text) * 1000)
     item_dict['replies'] = replies_text
 
@@ -120,9 +125,10 @@ for item in post_elems:
             if "K" in retweets_text:
                 retweets_text = retweets_text[:-1]
                 retweets_text = int(float(retweets_text) * 1000)
-            elif "Tsd." in retweets_text:
-                replies_text = replies_text[:-4]
-                replies_text = int(float(replies_text) * 1000)
+            elif "Tsd." in replies_text:
+                retweets_text = retweets_text[:-5]
+                retweets_text = convert_comma(retweets_text)
+                retweets_text = int(float(replies_text) * 1000)
     item_dict['retweets'] = retweets_text
 
     # NO of favourites
@@ -137,8 +143,9 @@ for item in post_elems:
                 favourites_text = favourites_text[:-1]
                 favourites_text = int(float(favourites_text) * 1000)
             elif "Tsd." in favourites_text:
-                replies_text = replies_text[:-4]
-                replies_text = int(float(replies_text) * 1000)
+                favourites_text = favourites_text[:-5]
+                favourites_text = convert_comma(favourites_text)
+                favourites_text = int(float(favourites_text) * 1000)
     item_dict['favourites'] = favourites_text
 
     # photo
