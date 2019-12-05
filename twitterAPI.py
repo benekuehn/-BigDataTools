@@ -84,7 +84,7 @@ i = 0
 has_writer = False
 for tweet in Collected_data:
 
-    if (datetime.now() - tweet.created_at).days > 0:
+    if (datetime.now() - tweet.created_at).days > 1:
 
         def clean_text(text):
             user_removed = re.sub(r'@[A-Za-z0-9]+', '', text)
