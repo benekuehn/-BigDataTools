@@ -120,7 +120,7 @@ for item in post_elems:
             if "K" in retweets_text:
                 retweets_text = retweets_text[:-1]
                 retweets_text = int(float(retweets_text) * 1000)
-            elif "Tsd." in replies_text:
+            elif "Tsd." in retweets_text:
                 replies_text = replies_text[:-4]
                 replies_text = int(float(replies_text) * 1000)
     item_dict['retweets'] = retweets_text
@@ -136,7 +136,7 @@ for item in post_elems:
             if "K" in favourites_text:
                 favourites_text = favourites_text[:-1]
                 favourites_text = int(float(favourites_text) * 1000)
-            elif "Tsd." in replies_text:
+            elif "Tsd." in favourites_text:
                 replies_text = replies_text[:-4]
                 replies_text = int(float(replies_text) * 1000)
     item_dict['favourites'] = favourites_text
