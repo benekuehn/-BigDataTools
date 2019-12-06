@@ -76,6 +76,7 @@ outtweets = [[tweet.id,
               # tweet.full_text,
               # tweet.entities["user_mentions"], // Just in case to memorize how it works
               tweet.in_reply_to_user_id,
+              tweet.retweet.user.screen_name,
               # tweet.author.screen_name, // Just in case to memorize how it works
               ] for tweet in Collected_data if (datetime.now() - tweet.created_at).days > 1]  # Only processing tweets which are older then 1 day
 
@@ -83,7 +84,6 @@ outtweets = [[tweet.id,
 i = 0
 has_writer = False
 for tweet in Collected_data:
-
     if (datetime.now() - tweet.created_at).days > 1:
 
         def clean_text(text):
@@ -169,6 +169,7 @@ if has_writer == True:
                          "retweet_count",
                          "source",
                          "in_reply_to_user_id",
+                         "retweeted_username",
                          # "polarity",
                          # "subjectivity",
                          "full_text",
@@ -191,6 +192,7 @@ else:
                          "retweet_count",
                          "source",
                          "in_reply_to_user_id",
+                         "retweeted_username",
                          # "polarity",
                          # "subjectivity",
                          "full_text",
