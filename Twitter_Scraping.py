@@ -1,42 +1,53 @@
-import time
-from datetime import datetime
-import pandas as pd
-
+import requests
 import csv
-
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
+from bs4 import BeautifulSoup
+from datetime import datetime
 
 import re
 import nltk
 from nltk.tokenize import WordPunctTokenizer
 from textblob import TextBlob
 
+import time
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 
-# Put in location of chrome driver https://chromedriver.chromium.org
-browser = webdriver.Chrome("/Users/luisanuhr/Desktop/chromedriver")
+now = datetime.now()
+
+# Using Selenium
+browser = webdriver.Chrome(
+    "/Users/benediktkuehn/Documents/Development/Python/Twitter/TwitterScraping/chromedriver")
 
 # Put in URL of account you want to scrape
-browser.get("https://twitter.com/AmericanAir")
-time.sleep(1)
+browser.get("https://twitter.com/elonmusk")
+time.sleep(1.5)
 
 elem = browser.find_element_by_tag_name("body")
 
-no_of_pagedowns = 10
+no_of_pagedowns = 100
 
 while no_of_pagedowns:
     elem.send_keys(Keys.PAGE_DOWN)
     time.sleep(1)
     no_of_pagedowns -= 1
 
-post_elems = browser.find_elements_by_class_name("has-cards")
+html = BeautifulSoup(browser.page_source, 'html.parser')
+timeline = html.select("#timeline li.stream-item")
 
-pd_list = []
 
-def convert_comma(text):
-	maketrans = text.maketrans
-	final = text.translate(maketrans(', .', '., '))
-	return final
+# Request approach
+"""
+url = "https://twitter.com/elonmusk"
+data = requests.get(url)
+
+html = BeautifulSoup(data.text, 'html.parser')
+timeline = html.select('#timeline li.stream-item')
+
+# print(timeline)
+"""
+
+outtweets = []
+
 
 def clean_text(text):
     user_removed = re.sub(r'@[A-Za-z0-9]+', '', text)
@@ -58,141 +69,81 @@ def get_text_sentiment(clean_text):
     return polarity, subjectivity
 
 
-for item in post_elems:
-    item_dict = {}
+for tweet in timeline:
+    tweet_id = tweet["data-item-id"]
+    username = tweet.find("span", {"class": 'username'}).text[1:]
+    full_text = clean_text(tweet.select('p.tweet-text')[0].get_text())
+    sentiment = get_text_sentiment(full_text)
+    created_at = datetime.fromtimestamp(int(tweet.find(
+        "span", {"class": "_timestamp"}).attrs["data-time"]))
+    favorite_count = int(tweet.find(
+        "span", {"class": "ProfileTweet-action--favorite"}).find(
+        "span", {"class": "ProfileTweet-actionCount"}).attrs["data-tweet-stat-count"])
+    retweet_count = int(tweet.find(
+        "span", {"class": "ProfileTweet-action--retweet"}).find(
+        "span", {"class": "ProfileTweet-actionCount"}).attrs["data-tweet-stat-count"])
 
-    # Handle
-    handle = item.find_elements_by_class_name("u-dir")
+    has_url = 0
+    try:
+        if tweet.find("div", {"class": "card-type-summary_large_image"}):
+            has_url = 1
+    except:
+        pass
 
-    # handle_text = ''
-    if len(handle) > 0:
-        handle_text = handle[0].text
-        cleaned_handle_text = clean_text(handle_text[1:])
-    item_dict['handle'] = cleaned_handle_text  # delete at character
+    has_image = 0
+    try:
+        if tweet.find("div", {"class": "AdaptiveMedia-photoContainer"}):
+            has_image = 1
+    except:
+        pass
 
-    # ID
-    ID = item.find_elements_by_class_name("show-popup-with-id")
-    ID_text = ''
-    if len(ID) > 0:
-        ID_text = ID[0].text
-        cleaned_screen_name = clean_text(ID_text)
-    item_dict['screen_name'] = cleaned_screen_name
+    has_video = 0
+    try:
+        if tweet.find("div", {"class": "AdaptiveMedia-video"}):
+            has_video = 1
+    except:
+        pass
 
-    # Time
-    time_ = item.find_elements_by_class_name("js-short-timestamp")
-    time_text = ''
-    if len(time_) > 0:
-        time_text = time_[0].text
-    item_dict['time'] = time_text
+    if has_image or has_video:
+        has_media = 1
+    else:
+        has_media = 0
 
-    # Text
-    text_ = item.find_elements_by_class_name("tweet-text")
-    text_text = ''
-    if len(text_) > 0:
-        text_text = text_[0].text
-        # Cleaning of text und sentiment of Text
-        cleaned_text = clean_text(text_text)
-        polarity, subjectivity = get_text_sentiment(cleaned_text)
-        item_dict['text'] = cleaned_text
-        item_dict['polarity'] = polarity
-        item_dict['subjectivity'] = subjectivity
+    # print(has_url)
 
-    # NO of replies
-    replies = item.find_elements_by_class_name("js-actionReply")
-    replies_text = 0
-    if len(replies) > 0:
-        temp = replies[0].find_elements_by_class_name(
-            "ProfileTweet-actionCountForPresentation")
-        if len(temp) > 0:
-            replies_text = temp[0].text
-            if "K" in replies_text:
-                replies_text = replies_text[:-1]
-                replies_text = int(float(replies_text) * 1000)
-            elif "Tsd." in replies_text:
-                replies_text = replies_text[:-5]
-                replies_text = convert_comma(replies_text)
-                replies_text = int(float(replies_text) * 1000)
-    item_dict['replies'] = replies_text
+    if (now - created_at).days > 1:
 
-    # NO of retweets
-    retweets = item.find_elements_by_class_name("js-actionRetweet")
-    retweets_text = 0
-    if len(retweets) > 0:
-        temp = retweets[0].find_elements_by_class_name(
-            "ProfileTweet-actionCountForPresentation")
-        if len(temp) > 0:
-            retweets_text = temp[0].text
-            if "K" in retweets_text:
-                retweets_text = retweets_text[:-1]
-                retweets_text = int(float(retweets_text) * 1000)
-            elif "Tsd." in replies_text:
-                retweets_text = retweets_text[:-5]
-                retweets_text = convert_comma(retweets_text)
-                retweets_text = int(float(replies_text) * 1000)
-    item_dict['retweets'] = retweets_text
-
-    # NO of favourites
-    favourites = item.find_elements_by_class_name("js-actionFavorite")
-    favourites_text = 0
-    if len(favourites) > 0:
-        temp = favourites[0].find_elements_by_class_name(
-            "ProfileTweet-actionCountForPresentation")
-        if len(temp) > 0:
-            favourites_text = temp[0].text
-            if "K" in favourites_text:
-                favourites_text = favourites_text[:-1]
-                favourites_text = int(float(favourites_text) * 1000)
-            elif "Tsd." in favourites_text:
-                favourites_text = favourites_text[:-5]
-                favourites_text = convert_comma(favourites_text)
-                favourites_text = int(float(favourites_text) * 1000)
-    item_dict['favourites'] = favourites_text
-
-    # photo
-    image = item.find_elements_by_class_name("js-adaptive-photo img")
-    image_text = False
-    if len(image) > 0:
-        image_text = True
-    item_dict['images'] = image_text
-
-    # video
-    video = item.find_elements_by_class_name("PlayableMedia-player")
-    video_text = False
-    if len(video) > 0:
-        video_text = True
-    item_dict['videos'] = video_text
-
-    # embedded link
-    embedded_link = item.find_elements_by_class_name(
-        "card-type-summary_large_image")
-    embedded_link_text = False
-    if len(embedded_link) > 0:
-        embedded_link_text = True
-    item_dict['embedded_link'] = embedded_link_text
-
-    # pinned_tweet
-    pinned = item.find_elements_by_class_name("js-pinned-text")
-    pinned_text = False
-    if len(pinned) > 0:
-        pinned_text = True
-    item_dict['pinned'] = pinned_text
-
-    # retweeting
-    retweeting = item.find_elements_by_class_name("js-retweet-text")
-    retweeting_text = False
-    if len(retweeting) > 0:
-        retweeing_text = True
-    item_dict['retweeting'] = retweeting_text
-
-    item_pd = pd.DataFrame(item_dict, index=[0])
-
-    pd_list.append(item_pd)
+        outtweets.append([tweet_id,
+                          username,
+                          full_text,
+                          sentiment[0],
+                          sentiment[1],
+                          created_at,
+                          favorite_count,
+                          retweet_count,
+                          has_url,
+                          has_image,
+                          has_video,
+                          has_media])
 
 
-now = datetime.now()
 dt_string = now.strftime("%d-%m-%Y-%H-%M-%S")
 
-file_name = "tweets_scraped_%s_%s.csv" % (ID_text, dt_string)
+file_name = "tweets_scraped_%s_%s.csv" % (username, dt_string)
 
-data = pd.concat(pd_list)
-data.to_csv(file_name)
+with open(file_name, "w",) as f:
+    writer = csv.writer(f)
+    writer.writerow(["tweet_id",
+                     "username",
+                     "full_text",
+                     "polarity",
+                     "subjectivity",
+                     "created_at",
+                     "favorite_count",
+                     "retweet_count",
+                     "has_url",
+                     "has_image",
+                     "has_video",
+                     "has_media"]
+                    )
+    writer.writerows(outtweets)
