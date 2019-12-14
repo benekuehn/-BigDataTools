@@ -17,10 +17,13 @@ dt_string = now.strftime("%d-%m-%Y-%H-%M-%S")
 outtweets = []
 
 username = "united"
-amount_of_tweets = 100  # minimum
+amount_of_tweets = 15000  # minimum
 
 file_name = "tweets_scraped_%s_%s.csv" % (username, dt_string)
 
+
+# Text Cleaning
+# by https://github.com/dzakyputra/sentweetbot/blob/master/main.py
 
 def clean_text(text):
     user_removed = re.sub(r'@[A-Za-z0-9]+', '', text)
@@ -33,12 +36,16 @@ def clean_text(text):
     return cleaned_text
 
 
+# Sentiment Analysis
+
 def get_text_sentiment(clean_text):
     analysis = TextBlob(clean_text)
     polarity = analysis.sentiment.polarity
     subjectivity = analysis.sentiment.subjectivity
     return polarity, subjectivity
 
+
+# Safe scraped tweets to list of lists -> outtweets
 
 def create_outtweets(timeline, source):
     for tweet in timeline:
@@ -120,6 +127,10 @@ def create_outtweets(timeline, source):
     return outtweets
 
 
+# Save to CSV
+# 1) create header row
+# 2) Write each list entry of outtweets as row
+
 def save_csv():
     saved_file_name = file_name
     with open(saved_file_name, "w",) as f:
@@ -143,6 +154,10 @@ def save_csv():
         writer.writerows(outtweets)
     return saved_file_name
 
+
+# Scraping class with two options:
+# 1) Scrape users timeline
+# 2) Use Advanced Search
 
 class scrape:
 
@@ -206,6 +221,8 @@ class scrape:
             saved_file_name = save_csv()
         return outtweets
 
+
+# Main part of program, just calls one of the two functions of scrape class
 
 outtweets = scrape(
 ).user_advanced_search(username, amount_of_tweets)
