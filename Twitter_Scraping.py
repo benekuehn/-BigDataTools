@@ -13,40 +13,13 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
 now = datetime.now()
-
-# Using Selenium
-browser = webdriver.Chrome(
-    "/Users/benediktkuehn/Documents/Development/Python/Twitter/TwitterScraping/chromedriver")
-
-# Put in URL of account you want to scrape
-browser.get("https://twitter.com/elonmusk")
-time.sleep(1.5)
-
-elem = browser.find_element_by_tag_name("body")
-
-no_of_pagedowns = 100
-
-while no_of_pagedowns:
-    elem.send_keys(Keys.PAGE_DOWN)
-    time.sleep(1)
-    no_of_pagedowns -= 1
-
-html = BeautifulSoup(browser.page_source, 'html.parser')
-timeline = html.select("#timeline li.stream-item")
-
-
-# Request approach
-"""
-url = "https://twitter.com/elonmusk"
-data = requests.get(url)
-
-html = BeautifulSoup(data.text, 'html.parser')
-timeline = html.select('#timeline li.stream-item')
-
-# print(timeline)
-"""
-
+dt_string = now.strftime("%d-%m-%Y-%H-%M-%S")
 outtweets = []
+
+username = "united"
+amount_of_tweets = 100  # minimum
+
+file_name = "tweets_scraped_%s_%s.csv" % (username, dt_string)
 
 
 def clean_text(text):
@@ -61,89 +34,178 @@ def clean_text(text):
 
 
 def get_text_sentiment(clean_text):
-    # create TextBlob object of passed tweet text
     analysis = TextBlob(clean_text)
-    # set sentiment
     polarity = analysis.sentiment.polarity
     subjectivity = analysis.sentiment.subjectivity
     return polarity, subjectivity
 
 
-for tweet in timeline:
-    tweet_id = tweet["data-item-id"]
-    username = tweet.find("span", {"class": 'username'}).text[1:]
-    full_text = clean_text(tweet.select('p.tweet-text')[0].get_text())
-    sentiment = get_text_sentiment(full_text)
-    created_at = datetime.fromtimestamp(int(tweet.find(
-        "span", {"class": "_timestamp"}).attrs["data-time"]))
-    favorite_count = int(tweet.find(
-        "span", {"class": "ProfileTweet-action--favorite"}).find(
-        "span", {"class": "ProfileTweet-actionCount"}).attrs["data-tweet-stat-count"])
-    retweet_count = int(tweet.find(
-        "span", {"class": "ProfileTweet-action--retweet"}).find(
-        "span", {"class": "ProfileTweet-actionCount"}).attrs["data-tweet-stat-count"])
+def create_outtweets(timeline, source):
+    for tweet in timeline:
+        tweet_id = tweet["data-item-id"]
+        username = tweet.find("span", {"class": 'username'}).text[1:]
+        full_text = clean_text(tweet.select('p.tweet-text')[0].get_text())
+        sentiment_value = get_text_sentiment(full_text)
 
-    has_url = 0
-    try:
-        if tweet.find("div", {"class": "card-type-summary_large_image"}):
-            has_url = 1
-    except:
-        pass
+        if sentiment_value[0] > 0:
+            polarity = "positve"
+        elif sentiment_value[0] < 0:
+            polarity = "negative"
+        else:
+            polarity = "neutral"
 
-    has_image = 0
-    try:
-        if tweet.find("div", {"class": "AdaptiveMedia-photoContainer"}):
-            has_image = 1
-    except:
-        pass
+        if sentiment_value[1] > 0.5:
+            subjectivity = "subjective"
+        else:
+            subjectivity = "objective"
 
-    has_video = 0
-    try:
-        if tweet.find("div", {"class": "AdaptiveMedia-video"}):
-            has_video = 1
-    except:
-        pass
+        created_at = datetime.fromtimestamp(int(tweet.find(
+            "span", {"class": "_timestamp"}).attrs["data-time"]))
+        favorite_count = int(tweet.find(
+            "span", {"class": "ProfileTweet-action--favorite"}).find(
+            "span", {"class": "ProfileTweet-actionCount"}).attrs["data-tweet-stat-count"])
+        retweet_count = int(tweet.find(
+            "span", {"class": "ProfileTweet-action--retweet"}).find(
+            "span", {"class": "ProfileTweet-actionCount"}).attrs["data-tweet-stat-count"])
 
-    if has_image or has_video:
-        has_media = 1
-    else:
-        has_media = 0
+        has_url = 0
+        try:
+            if tweet.find("div", {"class": "card-type-summary_large_image"}):
+                has_url = 1
+            elif tweet.find("span", {"class": "js-display-url"}):
+                has_url = 1
+            elif tweet.find("div", {"data-card2-name": "promo_website"}):
+                has_url = 1
+        except:
+            pass
 
-    # print(has_url)
+        has_image = 0
+        try:
+            if tweet.find("div", {"class": "AdaptiveMedia-photoContainer"}):
+                has_image = 1
+        except:
+            pass
 
-    if (now - created_at).days > 1:
+        has_video = 0
+        try:
+            if tweet.find("div", {"class": "AdaptiveMedia-video"}):
+                has_video = 1
+        except:
+            pass
 
-        outtweets.append([tweet_id,
-                          username,
-                          full_text,
-                          sentiment[0],
-                          sentiment[1],
-                          created_at,
-                          favorite_count,
-                          retweet_count,
-                          has_url,
-                          has_image,
-                          has_video,
-                          has_media])
+        if has_image or has_video:
+            has_media = 1
+        else:
+            has_media = 0
+
+        # print(has_url)
+
+        if (now - created_at).days > 1:
+
+            outtweets.append([tweet_id,
+                              username,
+                              full_text,
+                              sentiment_value[0],
+                              polarity,
+                              sentiment_value[1],
+                              subjectivity,
+                              created_at,
+                              favorite_count,
+                              retweet_count,
+                              has_url,
+                              has_image,
+                              has_video,
+                              has_media,
+                              source])
+    return outtweets
 
 
-dt_string = now.strftime("%d-%m-%Y-%H-%M-%S")
+def save_csv():
+    saved_file_name = file_name
+    with open(saved_file_name, "w",) as f:
+        writer = csv.writer(f)
+        writer.writerow(["tweet_id",
+                         "username",
+                         "full_text",
+                         "polarity_value",
+                         "polarity",
+                         "subjectivity_value",
+                         "subjectivity",
+                         "created_at",
+                         "favorite_count",
+                         "retweet_count",
+                         "has_url",
+                         "has_image",
+                         "has_video",
+                         "has_media",
+                         "tweet_source"]
+                        )
+        writer.writerows(outtweets)
+    return saved_file_name
 
-file_name = "tweets_scraped_%s_%s.csv" % (username, dt_string)
 
-with open(file_name, "w",) as f:
-    writer = csv.writer(f)
-    writer.writerow(["tweet_id",
-                     "username",
-                     "full_text",
-                     "polarity",
-                     "subjectivity",
-                     "created_at",
-                     "favorite_count",
-                     "retweet_count",
-                     "has_url",
-                     "has_image",
-                     "has_video",
-                     "has_media"]
-                    )
-    writer.writerows(outtweets)
+class scrape:
+
+    browser = webdriver.Chrome(
+        "/Users/benediktkuehn/Documents/Development/Python/Twitter/TwitterScraping/chromedriver")
+
+    def user_timeline(self, username, no_of_pagedowns):
+
+        url = "https://twitter.com/%s" % (username)
+
+        self.browser.get(url)
+        elem = self.browser.find_element_by_tag_name("body")
+
+        while no_of_pagedowns:
+            elem.send_keys(Keys.PAGE_DOWN)
+            time.sleep(1)
+            no_of_pagedowns -= 1
+
+        html = BeautifulSoup(self.browser.page_source, 'html.parser')
+        timeline = html.select("#timeline li.stream-item")
+        outtweets = create_outtweets(timeline, "User Timeline")
+        save_csv()
+
+    def user_advanced_search(self, username, amount_of_tweets, last_tweet_date=str(now.date())):
+
+        outtweets = []
+
+        while amount_of_tweets > len(outtweets):
+
+            try:
+                with open(saved_file_name, "r") as f:
+                    reader = csv.reader(f)
+                    reader.next()
+                    outtweets = list(reader)
+            except:
+                pass
+
+            url = "https://twitter.com/search?f=tweets&vertical=default&q=%28from%3A" + \
+                (username) + "%29%20until%3A" + \
+                last_tweet_date + "%20-filter%3Areplies"
+
+            self.browser.get(url)
+            elem = self.browser.find_element_by_tag_name("body")
+
+            no_of_pagedowns = 2
+            while no_of_pagedowns:
+                elem.send_keys(Keys.PAGE_DOWN)
+                time.sleep(1)
+                no_of_pagedowns -= 1
+
+            html = BeautifulSoup(self.browser.page_source, 'html.parser')
+            timeline = html.select("#timeline li.stream-item")
+            outtweets = create_outtweets(
+                timeline, "Advanced Search")
+
+            last_tweet_index = len(outtweets) - 1
+
+            last_tweet_date = str(outtweets[last_tweet_index][7].date())
+            # print(last_tweet_date)
+
+            saved_file_name = save_csv()
+        return outtweets
+
+
+outtweets = scrape(
+).user_advanced_search(username, amount_of_tweets)
