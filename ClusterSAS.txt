@@ -1,0 +1,15 @@
+proc contents data=tweets.data_clean;
+proc standard data=tweets.data_clean mean=0 std=1 out=tweets.data_std;
+var favorite_count retweet_count subjectivity_value polarity_value;
+run;
+
+proc print data=tweets.data_std;
+ods graphics on; * optional trim=22;
+proc cluster data=tweets.data_std method=ward ccc pseudo k=20 print=25;
+var favorite_count retweet_count subjectivity_value polarity_value;
+run;
+
+ods graphics off;
+proc fastclus data=tweets.data_std out=tweets.data_c3 maxclusters=3 maxiter=50;
+var favorite_count retweet_count subjectivity_value polarity_value;
+run;
